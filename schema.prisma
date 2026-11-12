@@ -1,0 +1,118 @@
+// Prakash Safety - data model
+// Author: Harsh Sharma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  name        String
+  slug        String    @unique
+  description String?
+  sortOrder   Int       @default(0)
+  products    Product[]
+  createdAt   DateTime  @default(now())
+}
+
+model Product {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  description String      @default("")
+  price       Int?        // optional selling price in INR (whole rupees); null = no price set
+  mrp         Int?        // optional strike-through MRP
+  showPrice   Boolean     @default(false) // when false the storefront shows "Price on request"
+  images      String[]    @default([])
+  features    String[]    @default([])
+  color       String?
+  sizes       String[]    @default([])
+  sku         String?
+  inStock     Boolean     @default(true)
+  featured    Boolean     @default(false)
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  orderItems  OrderItem[]
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([categoryId])
+  @@index([featured])
+}
+
+enum OrderStatus {
+  PENDING
+  CONTACTED
+  PAID
+  FULFILLED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  WHATSAPP
+  RAZORPAY
+  ENQUIRY
+}
+
+model Order {
+  id                String        @id @default(cuid())
+  customerName      String
+  phone             String
+  email             String?
+  address           String?
+  notes             String?
+  total             Int
+  status            OrderStatus   @default(PENDING)
+  paymentMethod     PaymentMethod @default(WHATSAPP)
+  razorpayOrderId   String?
+  razorpayPaymentId String?
+  items             OrderItem[]
+  createdAt         DateTime      @default(now())
+
+  @@index([status])
+}
+
+model OrderItem {
+  id        String   @id @default(cuid())
+  orderId   String
+  order     Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String
+  price     Int?     // null when the line was ordered without a price (quote on request)
+  qty       Int
+}
+
+enum EnquiryStatus {
+  NEW
+  CONTACTED
+  CLOSED
+}
+
+model Enquiry {
+  id                 String        @id @default(cuid())
+  name               String
+  company            String?
+  phone              String
+  email              String?
+  productRequirement String?
+  message            String?
+  status             EnquiryStatus @default(NEW)
+  createdAt          DateTime      @default(now())
+
+  @@index([status])
+}
+
+model Settings {
+  id              Int      @id @default(1)
+  onlinePayment   Boolean  @default(false) // when true, Razorpay checkout is shown
+  whatsappNumber  String   @default("919458778082")
+  announcement    String?
+  heroHeadline    String   @default("Safety That Stands Out")
+  heroSubtext     String   @default("High visibility. Maximum protection. Built for every job that matters.")
+  updatedAt       DateTime @updatedAt
+}
